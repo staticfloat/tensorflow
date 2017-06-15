@@ -91,7 +91,7 @@ RUN tensorflow/tools/ci_build/builds/configured GPU \
     rm -rf /root/.cache
 # Clean up pip wheel and Bazel cache when done.
 
-RUN cp .vimrc /root \
+RUN cp .vimrc /root &&\
     cp .gitconfig /root
 
 WORKDIR /root

@@ -1,6 +1,6 @@
 FROM nvidia/cuda:8.0-cudnn6-devel-ubuntu16.04
 
-MAINTAINER Josh Fromm <jwfromm@uw.edu>
+MAINTAINER Craig Citro <craigcitro@google.com>
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
@@ -36,7 +36,6 @@ RUN pip --no-cache-dir install \
         scipy \
         sklearn \
         pandas \
-        tensorboard \
         && \
     python -m ipykernel.kernelspec
 
@@ -92,6 +91,7 @@ RUN tensorflow/tools/ci_build/builds/configured GPU \
     rm -rf /root/.cache
 # Clean up pip wheel and Bazel cache when done.
 
+RUN pip --no-cache-dir install tensorboard
 RUN cp .vimrc /root &&\
     cp .gitconfig /root
 

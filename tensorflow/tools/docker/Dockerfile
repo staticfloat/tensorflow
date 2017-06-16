@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         openjdk-8-jdk \
         openjdk-8-jre-headless \
         vim \
+        wget \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -91,9 +92,16 @@ RUN tensorflow/tools/ci_build/builds/configured GPU \
     rm -rf /root/.cache
 # Clean up pip wheel and Bazel cache when done.
 
-RUN pip --no-cache-dir install tensorboard
+
+RUN pip --no-cache-dir install tensorboard \
+    scikit-learn \
+    pillow \
+    h5py \
+    keras
+
 RUN cp .vimrc /root &&\
-    cp .gitconfig /root
+    cp .gitconfig /root &&\
+    cp keras.json /root/.keras/
 
 WORKDIR /root
 

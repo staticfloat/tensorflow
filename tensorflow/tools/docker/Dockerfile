@@ -72,7 +72,7 @@ RUN mkdir /bazel && \
 
 # Download and build TensorFlow.
 
-RUN git clone https://github.com/jwfromm/tensorflow.git && \
+RUN git clone --recursive https://github.com/jwfromm/tensorflow.git && \
     cd tensorflow && \
     git checkout master
 WORKDIR /tensorflow
@@ -96,16 +96,17 @@ RUN tensorflow/tools/ci_build/builds/configured GPU \
 RUN pip --no-cache-dir install tensorboard \
     scikit-learn \
     pillow \
-    h5py
+    h5py \
+    pyyaml
 
 RUN cp .vimrc /root &&\
     cp .gitconfig /root &&\
     mkdir /root/.keras &&\
     cp keras.json /root/.keras/
 
-WORKDIR /root
-
 RUN python keras/setup.py install
+
+WORKDIR /root
 
 # TensorBoard
 EXPOSE 6006

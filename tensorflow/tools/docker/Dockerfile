@@ -96,14 +96,16 @@ RUN tensorflow/tools/ci_build/builds/configured GPU \
 RUN pip --no-cache-dir install tensorboard \
     scikit-learn \
     pillow \
-    h5py \
-    keras
+    h5py
 
 RUN cp .vimrc /root &&\
     cp .gitconfig /root &&\
+    mkdir /root/.keras &&\
     cp keras.json /root/.keras/
 
 WORKDIR /root
+
+RUN python keras/setup.py install
 
 # TensorBoard
 EXPOSE 6006

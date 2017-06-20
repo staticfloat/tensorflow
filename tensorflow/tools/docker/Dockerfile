@@ -113,4 +113,4 @@ EXPOSE 6006
 # IPython
 EXPOSE 8888
 
-RUN ["/bin/bash"]
+#RUN ["/bin/bash"]

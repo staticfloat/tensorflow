@@ -97,14 +97,13 @@ RUN pip --no-cache-dir install tensorboard \
     scikit-learn \
     pillow \
     h5py \
-    pyyaml
+    pyyaml \
+    keras
 
 RUN cp .vimrc /root &&\
     cp .gitconfig /root &&\
     mkdir /root/.keras &&\
     cp keras.json /root/.keras/
-
-RUN python keras/setup.py install
 
 WORKDIR /root
 
@@ -112,5 +111,4 @@ WORKDIR /root
 EXPOSE 6006
 # IPython
 EXPOSE 8888
-
 #RUN ["/bin/bash"]

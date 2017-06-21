@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         openjdk-8-jre-headless \
         vim \
         wget \
+        x11-apps \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -106,6 +107,8 @@ RUN cp .vimrc /root &&\
     cp keras.json /root/.keras/
 
 WORKDIR /root
+
+ENV DISPLAY :0
 
 # TensorBoard
 EXPOSE 6006

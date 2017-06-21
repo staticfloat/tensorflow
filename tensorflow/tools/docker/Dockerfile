@@ -22,6 +22,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         vim \
         wget \
         x11-apps \
+        usbutils \
+#opencv things
+        libgtk2.0-dev \
+        pkg-config \
+        libavcodec-dev \
+        libavformat-dev \
+        libswscale-dev \
+        libtbb2 \
+        libtbb-dev \
+        libjpeg-dev \
+        libpng-dev \
+        libtiff-dev \
+        libjasper-dev \
+        libdc1394-22-dev \ 
+        libeigen3-dev \
+        yasm \
+        libxvidcore-dev \
+        libx264-dev \
+        default-jdk \
+        ant \
+        libvtk5-qt4-dev \
+#opencv dependencies end
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -106,7 +128,26 @@ RUN cp .vimrc /root &&\
     mkdir /root/.keras &&\
     cp keras.json /root/.keras/
 
+# throw in opencv build
+# cd to /tmp and clone repos for OpenCV and extra modules
+WORKDIR /tmp
+RUN git clone https://github.com/Itseez/opencv.git
+RUN git clone https://github.com/Itseez/opencv_contrib.git
+
+# Create build folder
+WORKDIR /tmp/opencv
+RUN mkdir /tmp/opencv/build 
+WORKDIR /tmp/opencv/build
+
+# Build OpenCV
+RUN cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -D BUILD_NEW_PYTHON_SUPPORT=ON -D WITH_V4L=ON -D INSTALL_PYTHON_EXAMPLES=ON -D OPENCV_EXTRA_MODULES_PATH=/tmp/opencv_contrib/modules ..
+RUN make 
+RUN make install
+RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/opencv.conf
+RUN ldconfig
+
 WORKDIR /root
+RUN rm -rf /tmp/*
 
 ENV DISPLAY :0
 

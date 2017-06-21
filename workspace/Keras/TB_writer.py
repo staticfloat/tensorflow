@@ -24,7 +24,7 @@ def put_kernels_on_grid (kernel, pad = 1):
         if i == 1: print('Who would enter a prime number of filters')
         return (i, int(n / i))
   (grid_Y, grid_X) = factorization (kernel.get_shape()[3].value)
-  print ('grid: %d = (%d, %d)' % (kernel.get_shape()[3].value, grid_Y, grid_X))
+  #print ('grid: %d = (%d, %d)' % (kernel.get_shape()[3].value, grid_Y, grid_X))
 
   x_min = tf.reduce_min(kernel)
   x_max = tf.reduce_max(kernel)
@@ -89,7 +89,14 @@ class TB_writer(keras.callbacks.Callback):
             for layer in self.model.layers:
                 for weight in layer.weights:
                     mapped_weight_name = weight.name.replace(':', '_')
-                    tf.summary.histogram(mapped_weight_name, weight)
+                    if len(weight.shape) == 4:
+                        kernel_split = tf.split(weight, weight.shape[3], axis=3)
+                        i = 0
+                        for kernel in kernel_split:
+                            tf.summary.histogram(mapped_weight_name + str(i), kernel)
+                            i += 1
+                    else:
+                        tf.summary.histogram(mapped_weight_name, weight)
                     
                     if self.write_grads:
                         grads = model.optimizer.get_gradients(model.total_loss, weight)
@@ -215,4 +222,10 @@ class TB_writer(keras.callbacks.Callback):
         self.writer.flush()
 
     def on_train_end(self, _):
-        self.writer.close()                        
+        self.writer.close()     
+        
+def write_TB(model, log_dir, data_gen):
+    proxy_callback = TB_writer(histogram_freq=1, write_images=True, log_dir=log_dir, val_gen=data_gen)
+    proxy_callback.set_model(model)
+    proxy_callback.on_epoch_end(epoch=1)
+    proxy_callback.on_train_end(0)

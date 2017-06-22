@@ -5,6 +5,7 @@ from keras.engine.topology import Layer
 from keras.utils import conv_utils
 from keras.layers import activations, initializers, regularizers, constraints, InputSpec
 from keras import backend as K
+from keras.regularizers import Regularizer
 
 ### binary sign function with straight through estimator gradient and associated gradient overrides ###
 def binarySign(x):
@@ -223,3 +224,22 @@ class BinConv(Layer):
         }
         base_config = super(BinConv, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))    
+    
+class BinReg(Regularizer):
+    """Regularizer for a binary layer
+    # Arguments       
+        l2: Float; L2 regularization factor.
+    """
+
+    def __init__(self, l2=0.000003):        
+    #def __init__(self, l2=0.0):        
+        self.l2 = K.cast_to_floatx(l2)
+
+    def __call__(self, x):
+        regularization = 0.
+        if self.l2:
+            regularization += K.sum(K.abs(self.l2 * (1 - K.square(x))))
+        return regularization
+
+    def get_config(self):
+        return {'l2': float(self.l2)}

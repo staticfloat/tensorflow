@@ -43,6 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         default-jdk \
         ant \
         libvtk5-qt4-dev \
+        cmake \
 #opencv dependencies end
         && \
     apt-get clean && \
@@ -140,7 +141,7 @@ RUN mkdir /tmp/opencv/build
 WORKDIR /tmp/opencv/build
 
 # Build OpenCV
-RUN cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -D BUILD_NEW_PYTHON_SUPPORT=ON -D WITH_V4L=ON -D INSTALL_PYTHON_EXAMPLES=ON -D OPENCV_EXTRA_MODULES_PATH=/tmp/opencv_contrib/modules ..
+RUN cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -D BUILD_NEW_PYTHON_SUPPORT=ON -D WITH_V4L=ON -D INSTALL_PYTHON_EXAMPLES=ON -D OPENCV_EXTRA_MODULES_PATH=/tmp/opencv_contrib/modules -DCUDA_ARCH_BIN=6.1 -DCUDA_ARCH_PTX=6.1 ..
 RUN make 
 RUN make install
 RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/opencv.conf

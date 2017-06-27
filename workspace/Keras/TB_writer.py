@@ -130,10 +130,21 @@ class TB_writer(keras.callbacks.Callback):
                         shape = K.int_shape(w_img)
                         #print(shape)
                         assert len(shape) == 4 and shape[-1] in [1, 3, 4]
-                        tf.summary.image(mapped_weight_name,w_img, max_outputs=32)
+                        tf.summary.image(mapped_weight_name,w_img, max_outputs=8)
                         
-                if hasattr(layer, 'output'):
-                    tf.summary.histogram('{}_out'.format(layer.name), layer.output)
+                if hasattr(layer, 'output'):              
+                    mapped_layer_name = layer.name.replace(':', '_')
+                    if len(layer.output.shape) == 4:                        
+                        output_split = tf.split(layer.output, layer.output.shape[3], axis=3)
+                        i = 0
+                        for output in output_split:
+                            tf.summary.histogram('{}/out'.format(mapped_layer_name) + str(i), output)
+                            tf.summary.image('{}/out'.format(mapped_layer_name) + str(i), output)
+                            i += 1
+                            if i > 16:
+                                break;
+                    else:
+                        tf.summary.histogram('{}/out'.format(mapped_layer_name), layer.output)                        
                     
             self.merged = tf.summary.merge_all()
             if self.write_graph:
@@ -222,7 +233,7 @@ class TB_writer(keras.callbacks.Callback):
         self.writer.flush()
 
     def on_train_end(self, _):
-        self.writer.close()     
+        self.writer.close()  
         
 def write_TB(model, log_dir, data_gen):
     proxy_callback = TB_writer(histogram_freq=1, write_images=True, log_dir=log_dir, val_gen=data_gen)

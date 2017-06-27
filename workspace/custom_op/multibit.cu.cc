@@ -21,8 +21,11 @@ __global__ void MultibitCudaKernel(const int size, const int *b, const T* in, T*
     if (ldg(in + i) < -1) {
         val = -1;
     }
-    else if (ldg(in + 1) > 1) {
+    else if (ldg(in + i) > 1) {
         val = 1;
+    }
+    else {
+        val = ldg(in + i);
     }
     // set space between 0 and 2
     val = val + 1;

@@ -6,6 +6,7 @@ from keras.utils import conv_utils
 from keras.layers import activations, initializers, regularizers, constraints, InputSpec
 from keras import backend as K
 from keras.regularizers import Regularizer
+from CustomOps import multibit, binarize
 
 ### binary sign function with straight through estimator gradient and associated gradient overrides ###
 def binarySign(x):
@@ -13,10 +14,6 @@ def binarySign(x):
     with ops.name_scope("binarySign") as name:
         with g.gradient_override_map({"Sign": "Bin_ST"}):
             return tf.sign(x)
-
-@ops.RegisterGradient("DubIdent")
-def dubIdent(op, grad):
-    return [tf.ones(tf.shape(op.inputs[0])), tf.ones(tf.shape(op.inputs[1]))]
 
 @ops.RegisterGradient("Bin_ST")
 def bin_ST(op, grad):
@@ -32,10 +29,23 @@ class BinLayer(Layer):
     def build(self, input_shape):
         super(BinLayer, self).build(input_shape)
     def call(self, x):
-        return binarySign(x)
+        return binarize(x)
+        #return binarySign(x)
     def compute_output_shape(self, input_shape):
         return input_shape
 
+### Keras multibit layer
+class MultibitLayer(Layer):
+    def __init__(self, num_bits, **kwargs):
+        self.num_bits = num_bits
+        super(MultibitLayer, self).__init__(**kwargs)
+    def build(self, input_shape):
+        super(MultibitLayer, self).build(input_shape)
+    def call(self, x):
+        return multibit(x, self.num_bits)
+    def compute_output_shape(self, input_shape):
+        return input_shape
+    
 class BinConv(Layer):
     """Abstract nD convolution layer (private, used as implementation base).
     This layer creates a convolution kernel that is convolved
@@ -157,7 +167,8 @@ class BinConv(Layer):
         self.built = True
 
     def call(self, inputs):
-        bin_kernel = binarySign(self.kernel)
+        bin_kernel = binarize(self.kernel)
+        #bin_kernel = binarySign(self.kernel)
         outputs = K.conv2d(
             inputs,
             bin_kernel,

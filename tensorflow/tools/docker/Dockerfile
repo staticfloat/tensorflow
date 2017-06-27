@@ -129,26 +129,33 @@ RUN cp .vimrc /root &&\
     mkdir /root/.keras &&\
     cp keras.json /root/.keras/
 
-# throw in opencv build
-# cd to /tmp and clone repos for OpenCV and extra modules
-WORKDIR /tmp
-RUN git clone https://github.com/Itseez/opencv.git
-RUN git clone https://github.com/Itseez/opencv_contrib.git
-
-# Create build folder
-WORKDIR /tmp/opencv
-RUN mkdir /tmp/opencv/build 
-WORKDIR /tmp/opencv/build
-
-# Build OpenCV
-RUN cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local -D BUILD_NEW_PYTHON_SUPPORT=ON -D WITH_V4L=ON -D INSTALL_PYTHON_EXAMPLES=ON -D OPENCV_EXTRA_MODULES_PATH=/tmp/opencv_contrib/modules -DCUDA_ARCH_BIN=6.1 -DCUDA_ARCH_PTX=6.1 ..
-RUN make 
-RUN make install
-RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/opencv.conf
-RUN ldconfig
+WORKDIR /
+RUN wget https://github.com/Itseez/opencv/archive/3.2.0.zip \
+&& unzip 3.2.0.zip \
+&& mkdir /opencv-3.2.0/cmake_binary \
+&& cd /opencv-3.2.0/cmake_binary \
+&& cmake -DBUILD_TIFF=ON \
+  -DBUILD_opencv_java=OFF \
+  -DWITH_CUDA=OFF \
+  -DENABLE_AVX=ON \
+  -DWITH_OPENGL=ON \
+  -DWITH_OPENCL=ON \
+  -DWITH_IPP=ON \
+  -DWITH_TBB=ON \
+  -DWITH_EIGEN=ON \
+  -DWITH_V4L=ON \
+  -DBUILD_TESTS=OFF \
+  -DBUILD_PERF_TESTS=OFF \
+  -DCMAKE_BUILD_TYPE=RELEASE \
+  -DCMAKE_INSTALL_PREFIX=$(python -c "import sys; print(sys.prefix)") \
+  -DPYTHON_EXECUTABLE=$(which python) \
+  -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+  -DPYTHON_PACKAGES_PATH=$(python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") .. \
+&& make install \
+&& rm /3.2.0.zip \
+&& rm -r /opencv-3.2.0
 
 WORKDIR /root
-RUN rm -rf /tmp/*
 
 ENV DISPLAY :0
 

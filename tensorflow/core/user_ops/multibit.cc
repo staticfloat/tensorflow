@@ -76,6 +76,7 @@ class MultibitOp : public OpKernel {
     // Grab the input tensor
     const Tensor& input_tensor = context->input(0);
     const Tensor& bit_map_tensor = context->input(1);
+    OP_REQUIRES(context, input_tensor.NumElements() == bit_map_tensor.NumElements(), errors::InvalidArgument("bit map must be same shape as input"));
     const Tensor& max_bit_tensor = context->input(2);
     OP_REQUIRES(context, TensorShapeUtils::IsScalar(max_bit_tensor.shape()),
                 errors::InvalidArgument("multibit expects a scalar for `max_bit`."));

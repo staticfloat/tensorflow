@@ -5,61 +5,97 @@
 
 #include "multibit.h"
 #include "tensorflow/core/util/cuda_kernel_helper.h"
+#include <cuda_runtime.h>
+//#include "cublas_v2.h"
 
 using namespace tensorflow;
 
 #define EIGEN_USE_GPU
 
-// Define the CUDA kernel.
 template <typename T>
-__global__ void MultibitCudaKernel(const int size, const int *b, const T* in, T* out) {
-  int bits = *b;
-  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < size;
-       i += blockDim.x * gridDim.x) {
-    // perform clipping
-    T val;
-    if (ldg(in + i) < -1) {
-        val = -1;
+__global__ void bitUpdateKernel(const int size, const int bitindex, const int *bit_map, T* in, T* out, T* hot_sum, int* valid_count) {
+    T bit_mean = *hot_sum / *valid_count;
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < size; i += blockDim.x * gridDim.x) {
+        if (bit_map[i] > bitindex) {
+            if (in[i] > 0) {
+                out[i] += bit_mean;
+                in[i] = in[i] - bit_mean;
+            } else {
+                out[i] -= bit_mean;
+                in[i] = in[i] + bit_mean;
+            }
+        }
     }
-    else if (ldg(in + i) > 1) {
-        val = 1;
-    }
-    else {
-        val = ldg(in + i);
-    }
-    // set space between 0 and 2
-    val = val + 1;
-    // multiply by power of 2 to get range
-    val = val * powf(2.0, bits - 1);
-    // round to get binary percision
-    val = floorf(val);
-    // check edge case and fix
-    if (val == powf(2.0, bits)) {
-        val = val - 1;
-    }
-    // divide by max value
-    val = val / (powf(2.0, bits) - 1);
-    // distribute about 0
-    val = val - 0.5;
-    // stretch to -1 to 1 range
-    val = 2 * val;
-    // assign output
-    out[i] = val;
-  }
 }
+
+template <typename T>
+__global__ void bitMeanKernel(const int size, const int bitindex, const int *bit_map, const T* in, T* hot_sum, int* valid_count) {
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < size; i += blockDim.x * gridDim.x) {
+        if (bit_map[i] > bitindex) {
+            float val = fabsf(in[i]);
+            atomicAdd(hot_sum, val);
+            atomicAdd(valid_count, 1);
+        }
+    }
+} 
 
 // Define the GPU implementation that launches the CUDA kernel.
 template <typename T>
 struct MultibitFunctor<GPUDevice, T> {
-  void operator()(const GPUDevice& d, int size, const int *bits, const T* in, T* out) {
+  void operator()(const GPUDevice& d, int size, const int *max_bit, const int* bit_map, const T* in, T* out) {
     // Launch the cuda kernel.
     //
     // See core/util/cuda_kernel_helper.h for example of computing
     // block count and thread_per_block count.
-    int block_count = 1024;
-    int thread_per_block = 20;
-    MultibitCudaKernel<T>
-        <<<block_count, thread_per_block, 0, d.stream()>>>(size, bits, in, out);
+    CudaLaunchConfig cudaconf = GetCudaLaunchConfig(size, d);
+    int block_count = cudaconf.block_count;
+    int thread_per_block = cudaconf.thread_per_block;
+
+    // get the maximum seen bit value
+    cudaError_t cudaStat;
+    cudaStat = cudaMemset(out, 0, sizeof(T)*size);
+    if (cudaStat != cudaSuccess) {
+        printf("Output was not set to 0 properly\n");
+    }
+    // allocate some space
+    T *carry_over;
+    cudaStat = cudaMalloc((void **)&carry_over, sizeof(T)*size);
+    if (cudaStat != cudaSuccess) {
+        printf("Could not allocate carry over\n");
+    }
+    cudaStat = cudaMemcpy(carry_over, in, sizeof(T)*size, cudaMemcpyDeviceToDevice);
+    if (cudaStat != cudaSuccess) {
+        printf("Copy from input to carry over failed\n");
+    }
+
+    // now that we have things set up, lets start our algorithm
+    // first figure out the maximum number of bits requested
+    int bitmax;
+    cudaStat = cudaMemcpy(&bitmax, max_bit, sizeof(int), cudaMemcpyDeviceToHost);
+    if (cudaStat != cudaSuccess) {
+        printf("Failed to pull max bit value to cpu\n");
+    }
+    // iterate through the number of bits we need to binarize
+    int *hot_bits;
+    int hot_bits_cpu;
+    T *hot_sum;
+    T hot_sum_cpu; 
+    cudaMalloc((void **)&hot_bits, sizeof(int));
+    cudaMalloc((void**)&hot_sum, sizeof(T));
+
+    for (int i = 0; i < bitmax; i++) {
+        // compute the mean of the current carry over
+        cudaMemset(hot_bits, 0, sizeof(int));
+        cudaMemset(hot_sum, 0, sizeof(T));
+        bitMeanKernel<T> <<< block_count, thread_per_block, 0, d.stream() >>> (size, i, bit_map, carry_over, hot_sum, hot_bits);
+        cudaMemcpy(&hot_bits_cpu, hot_bits, sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&hot_sum_cpu, hot_sum, sizeof(T), cudaMemcpyDeviceToHost);
+        // now add this bits contribution to the approximation and update carryover
+        bitUpdateKernel<T> <<< block_count, thread_per_block, 0, d.stream() >>> (size, i, bit_map, carry_over, out, hot_sum, hot_bits);
+    }
+    cudaFree(carry_over);
+    cudaFree(hot_sum);
+    cudaFree(hot_bits);
   }
 };
 

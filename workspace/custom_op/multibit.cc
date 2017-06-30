@@ -13,7 +13,8 @@ using GPUDevice = Eigen::GpuDevice;
 REGISTER_OP("Multibit")
         .Attr("T: {float, int32}")
         .Input("input: T")
-        .Input("bits: int32")
+        .Input("bit_map: int32")
+        .Input("max_bit: int32")
         .Output("output: T")
         .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
             c->set_output(0, c->input(0));
@@ -27,41 +28,40 @@ output: binarized tensor
 // CPU specialization of actual computation.
 template <typename T>
 struct MultibitFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, int size, const int *b, const T* in, T* out) {
-    int bits = *b;
-    for (int i = 0; i < size; ++i) {
-        // perform clipping of the input
-        T val;
-        if (in[i] < -1){
-            val = -1;
+  void operator()(const CPUDevice& d, int size, const int *max_bit, const int* bit_map, const T* in, T* out) {
+    // allocate some space to store the carry over
+    T* carry_over = (T*) malloc(size * sizeof(T));
+    std::memcpy(carry_over, in, size * sizeof(T));
+    // set all values of out to 0
+    std::memset(out, 0, size * sizeof(T));
+    // go ahead and pull out the max bit value
+    int bitmax = *max_bit;
+    // iterate through the number of bits needed to binarize
+    for (int b = 0; b < bitmax; b++) {
+        // compute the mean of the current carry over
+        int hot_bits = 0;
+        T hot_sum = 0;
+        for (int i = 0; i < size; ++i) {
+            if (bit_map[i] > b) {
+                hot_sum += abs(carry_over[i]);
+                hot_bits += 1;
+            }
         }
-        else if (in[i] > 1){
-            val = 1;
+        T bit_mean = hot_sum / hot_bits;
+        // now that mean is computed update approximation
+        for (int i = 0; i < size; ++i) {
+            if (bit_map[i] > b) {
+                if (carry_over[i] > 0) {
+                    out[i] += bit_mean;
+                    carry_over[i] = carry_over[i] - bit_mean;
+                } else {
+                    out[i] -= bit_mean;
+                    carry_over[i] = carry_over[i] + bit_mean;
+                }
+            }
         }
-        else {
-            val = in[i];
-        }
-        
-        // set space to between 0 and 2 
-        val = val + 1; 
-        // multiply by the appropriate power of 2
-        val = val * pow(2.0, bits - 1);
-        // round to get proper precision
-        val = floor(val);
-        // range is now 0 to 2^(n-1) 
-        // check the edge case and reduce val to proper range
-        if (val == pow(2.0, bits)){
-            val = val - 1;
-        }
-        // divide by max value to crunch into proper range
-        val = val / (pow(2.0, bits) - 1);
-        // distribute about 0
-        val = val - 0.5;
-        // stretch to between -1 and 1
-        val = 2*val;
-        // assign output
-        out[i] = val;
     }
+    free(carry_over);
   }
 };
 
@@ -75,10 +75,11 @@ class MultibitOp : public OpKernel {
   void Compute(OpKernelContext* context) override {
     // Grab the input tensor
     const Tensor& input_tensor = context->input(0);
-    const Tensor& bits_tensor = context->input(1);
-    OP_REQUIRES(context, TensorShapeUtils::IsScalar(bits_tensor.shape()),
-                errors::InvalidArgument("multibit expects a scalar for `bits`."));
-    const auto bits = bits_tensor.scalar<int>();
+    const Tensor& bit_map_tensor = context->input(1);
+    const Tensor& max_bit_tensor = context->input(2);
+    OP_REQUIRES(context, TensorShapeUtils::IsScalar(max_bit_tensor.shape()),
+                errors::InvalidArgument("multibit expects a scalar for `max_bit`."));
+    const auto max_bit = max_bit_tensor.scalar<int>();
 
     // Create an output tensor
     Tensor* output_tensor = NULL;
@@ -91,7 +92,8 @@ class MultibitOp : public OpKernel {
     MultibitFunctor<Device, T>()(
         context->eigen_device<Device>(),
         static_cast<int>(input_tensor.NumElements()),
-        bits.data(),
+        max_bit.data(),
+        bit_map_tensor.flat<int>().data(),
         input_tensor.flat<T>().data(),
         output_tensor->flat<T>().data());
   }

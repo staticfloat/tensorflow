@@ -95,6 +95,8 @@ class TB_writer(keras.callbacks.Callback):
                         for kernel in kernel_split:
                             tf.summary.histogram(mapped_weight_name + str(i), kernel)
                             i += 1
+                            if (i > 64):
+                                break
                     else:
                         tf.summary.histogram(mapped_weight_name, weight)
                     

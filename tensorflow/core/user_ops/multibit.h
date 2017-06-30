@@ -4,7 +4,7 @@
 
 template <typename Device, typename T>
 struct MultibitFunctor {
-  void operator()(const Device& d, int size, const int *b, const T* in, T* out);
+  void operator()(const Device& d, int size, const int *max_bit, const int* bit_map, const T* in, T* out);
 };
 
 #endif

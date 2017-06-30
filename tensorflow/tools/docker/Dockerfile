@@ -100,6 +100,7 @@ RUN git clone --recursive https://github.com/jwfromm/tensorflow.git && \
     cd tensorflow && \
     git checkout master
 WORKDIR /tensorflow
+RUN git pull
 
 # Configure the build for our CUDA configuration.
 ENV CI_BUILD_PYTHON python
@@ -155,6 +156,12 @@ RUN wget https://github.com/Itseez/opencv/archive/3.2.0.zip \
 && rm /3.2.0.zip \
 && rm -r /opencv-3.2.0
 
+WORKDIR /root
+
+# build custom ops
+WORKDIR /tensorflow/tensorflow/core/user_ops
+RUN /bin/bash build_command.sh
+ENV LD_LIBRARY_PATH /tensorflow/bazel-bin/tensorflow/core/user_ops:$LD_LIBRARY_PATH
 WORKDIR /root
 
 ENV DISPLAY :0

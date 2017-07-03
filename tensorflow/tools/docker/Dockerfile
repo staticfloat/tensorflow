@@ -23,6 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         wget \
         x11-apps \
         usbutils \
+        python-tk \
+        protobuf-compiler \
 #opencv things
         libgtk2.0-dev \
         pkg-config \
@@ -161,6 +163,7 @@ WORKDIR /root
 
 # build custom ops
 WORKDIR /tensorflow/tensorflow/core/user_ops
+RUN git pull
 RUN /bin/bash build_command.sh
 ENV LD_LIBRARY_PATH /tensorflow/bazel-bin/tensorflow/core/user_ops:$LD_LIBRARY_PATH
 WORKDIR /root

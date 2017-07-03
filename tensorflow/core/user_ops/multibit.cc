@@ -7,8 +7,7 @@
 
 using namespace tensorflow;
 
-using CPUDevice = Eigen::ThreadPoolDevice;
-using GPUDevice = Eigen::GpuDevice;
+using CPUDevice = Eigen::ThreadPoolDevice; using GPUDevice = Eigen::GpuDevice;
 
 REGISTER_OP("Multibit")
         .Attr("T: {float, int32}")
@@ -75,8 +74,8 @@ class MultibitOp : public OpKernel {
   void Compute(OpKernelContext* context) override {
     // Grab the input tensor
     const Tensor& input_tensor = context->input(0);
+    //printf("Shape: %lld\n", (*(input_tensor.shape().begin())).size);
     const Tensor& bit_map_tensor = context->input(1);
-    OP_REQUIRES(context, input_tensor.NumElements() == bit_map_tensor.NumElements(), errors::InvalidArgument("bit map must be same shape as input"));
     const Tensor& max_bit_tensor = context->input(2);
     OP_REQUIRES(context, TensorShapeUtils::IsScalar(max_bit_tensor.shape()),
                 errors::InvalidArgument("multibit expects a scalar for `max_bit`."));
@@ -90,13 +89,29 @@ class MultibitOp : public OpKernel {
     // Do the computation.
     OP_REQUIRES(context, input_tensor.NumElements() <= tensorflow::kint32max,
                 errors::InvalidArgument("Too many elements in tensor"));
-    MultibitFunctor<Device, T>()(
-        context->eigen_device<Device>(),
-        static_cast<int>(input_tensor.NumElements()),
-        max_bit.data(),
-        bit_map_tensor.flat<int>().data(),
-        input_tensor.flat<T>().data(),
-        output_tensor->flat<T>().data());
+    if (input_tensor.dims() > bit_map_tensor.dims()) {
+        for(int i = 0; i < input_tensor.dim_size(0); i++) {
+            auto input_slice = input_tensor.Slice(i, i+1);
+            auto output_slice = output_tensor->Slice(i, i+1);
+            OP_REQUIRES(context, input_slice.NumElements() == bit_map_tensor.NumElements(), errors::InvalidArgument("bit map must be same shape as input"));
+            MultibitFunctor<Device, T>()(
+                context->eigen_device<Device>(),
+                static_cast<int>(input_slice.NumElements()),
+                max_bit.data(),
+                bit_map_tensor.flat<int>().data(),
+                input_slice.flat<T>().data(),
+                output_slice.flat<T>().data());
+        }
+    } else {
+        OP_REQUIRES(context, input_tensor.NumElements() == bit_map_tensor.NumElements(), errors::InvalidArgument("bit map must be same shape as input"));
+        MultibitFunctor<Device, T>()(
+            context->eigen_device<Device>(),
+            static_cast<int>(input_tensor.NumElements()),
+            max_bit.data(),
+            bit_map_tensor.flat<int>().data(),
+            input_tensor.flat<T>().data(),
+            output_tensor->flat<T>().data()); 
+    }
   }
 };
 

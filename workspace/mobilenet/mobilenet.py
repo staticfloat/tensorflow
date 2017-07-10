@@ -11,7 +11,7 @@ from depthwise_conv2d import DepthwiseConvolution2D
 - [MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications](https://arxiv.org/pdf/1704.04861.pdf)
 '''
 
-def MobileNet(input_tensor=None, input_shape=None, alpha=1, shallow=False, classes=1000):
+def MobileNet(input_tensor, input_shape=None, alpha=1, shallow=True, classes=1000):
     """Instantiates the MobileNet.Network has two hyper-parameters
         which are the width of network (controlled by alpha)
         and input size.

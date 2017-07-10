@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         usbutils \
         python-tk \
         protobuf-compiler \
+        graphviz \
 #opencv things
         libgtk2.0-dev \
         pkg-config \
@@ -152,6 +153,10 @@ RUN pip --no-cache-dir install tensorboard \
     pillow \
     h5py \
     pyyaml \
+    pydot_ng \
+    pydot \
+    mixpanel \
+    graphviz \
     keras
 
 RUN cp .vimrc /root &&\

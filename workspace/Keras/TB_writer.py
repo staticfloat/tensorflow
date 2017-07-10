@@ -71,7 +71,7 @@ class TB_writer(keras.callbacks.Callback):
                  embeddings_metadata=None,
                  val_gen=None):
         super(TB_writer, self).__init__()
-        self.log_dir = "/data/tensorflow/log/"+log_dir
+        self.log_dir = log_dir
         self.histogram_freq = histogram_freq
         self.write_graph = write_graph
         self.write_grads = write_grads

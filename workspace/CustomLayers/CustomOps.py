@@ -2,8 +2,8 @@ import tensorflow as tf
 from tensorflow.python.framework import ops
 import numpy as np
 
-binarize_module = tf.load_op_library("binarize.so")
-multibit_module = tf.load_op_library("multibit.so")
+binarize_module = tf.load_op_library("libbinarize.so")
+multibit_module = tf.load_op_library("libmultibit.so")
 
 @ops.RegisterGradient("Binarize")
 def bin_grad(op, grad):

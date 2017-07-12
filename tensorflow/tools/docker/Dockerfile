@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libpng12-dev \
         libzmq3-dev \
         pkg-config \
-        python-dev \
+        python3-dev \
         rsync \
         software-properties-common \
         unzip \
@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         wget \
         x11-apps \
         usbutils \
-        python-tk \
+        python3-tk \
         protobuf-compiler \
         graphviz \
 #opencv things
@@ -51,6 +51,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+RUN rm /usr/bin/python
+RUN ln -s /usr/bin/python3 /usr/bin/python
 
 RUN curl -fSsL -O https://bootstrap.pypa.io/get-pip.py && \
     python get-pip.py && \

@@ -13,6 +13,8 @@ from keras.utils import np_utils
 from keras.datasets import mnist, cifar10
 from keras.models import Sequential, Model
 from keras.engine.topology import Layer
+from phillylogger import *
+import argparse
 
 
 class PhillyLogger(keras.callbacks.Callback):
@@ -50,6 +52,13 @@ class TestLayer(Layer):
 
 
 # In[4]:
+parser = argparse.ArgumentParser()
+parser.add_argument('-logdir', '--logdir', help='Log File', required=True, default=None)
+args = vars(parser.parse_args())
+
+logdir=args['logdir']
+
+philly_logger = PhillyLogger(logdir, 10, 50000)
 
 
 (X_train, y_train), (X_test, y_test) = cifar10.load_data()
@@ -110,8 +119,7 @@ model.add(Dense(10, activation='softmax'))"""
 
 
 # In[10]:
-callback = []
-philly_logger = PhillyLogger(logdir, epochs, epochs*(train_gen.samples / train_gen.batch_size))
+callbacks = []
 callbacks.append(philly_logger)
 
 
@@ -124,7 +132,7 @@ model.compile(loss='categorical_crossentropy',
 
 
 model.fit(X_train, Y_train, 
-          batch_size=32, epochs=10, verbose=1, callbacks=callbacks)
+          batch_size=32, epochs=10, verbose=0, callbacks=callbacks)
 
 
 # In[21]:

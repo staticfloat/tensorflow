@@ -23,7 +23,9 @@ def binarize(x):
     return binarize_module.binarize(x)
 
 def multibit(x, bit_map):
+    x = np.asarray(x[0], dtype=np.float32)
+
     # Broadcast bit_map up to the same says as the weights shape
-    bit_map = np.broadcast_to(bit_map, x[0].shape)
+    bit_map = np.broadcast_to(bit_map, x.shape)
     max_bit = np.max(bit_map)
     return multibit_module.multibit(x, tf.constant(bit_map, dtype=np.int32), tf.constant(max_bit, dtype=np.int32))

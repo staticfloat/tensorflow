@@ -68,15 +68,9 @@ class BinDense(keras.layers.Dense):
     def __init__(self, units, **kwargs):
         super(BinDense, self).__init__(units, **kwargs)
 
-    def call(self, inputs):
-        # Save current kernel, overwrite it with the binarized kernel, use the
-        # binarized kernel to do our evaluation by calling super().call(), then
-        # flip back to the old kernel so that backprop still works.
-        old_kernel = self.kernel
+    def build(self, input_shape):
+        super(BinDense, self).build(input_shape)
         self.kernel = binarize(self.kernel)
-        output = super(BinDense, self).call(inputs)
-        self.kernel = old_kernel
-        return output
 
 class MultiDense(keras.layers.Dense):
     """
@@ -90,15 +84,9 @@ class MultiDense(keras.layers.Dense):
         super(MultiDense, self).__init__(units, **kwargs)
         self.bit_map = bit_map
 
-    def call(self, inputs):
-        # Save current kernel, overwrite it with the quantized kernel, use the
-        # binarized kernel to do our evaluation by calling super().call(), then
-        # flip back to the old kernel so that backprop still works.
-        old_kernel = self.kernel
+    def build(self, input_shape):
+        super(MultiDense, self).build(input_shape)
         self.kernel = multibit(self.kernel, self.bit_map)
-        output = super(MultiDense, self).call(inputs)
-        self.kernel = old_kernel
-        return output
 
     def get_config(self):
         config = {
@@ -115,15 +103,9 @@ class BinConv(keras.layers.convolutional._Conv):
     def __init__(self, filters, kernel_size, **kwargs):
         super(BinConv, self).__init__(filters, kernel_size, **kwargs)
 
-    def call(self, inputs):
-        # Save current kernel, overwrite it with the quantized kernel, use the
-        # binarized kernel to do our evaluation by calling super().call(), then
-        # flip back to the old kernel so that backprop still works.
-        old_kernel = self.kernel
+    def build(self, input_shape):
+        super(BinConv, self).build(input_shape)
         self.kernel = binarize(self.kernel)
-        output = super(BinConv, self).call(inputs)
-        self.kernel = old_kernel
-        return output
 
 class MultiConv(keras.layers.convolutional._Conv):
     """
@@ -137,15 +119,9 @@ class MultiConv(keras.layers.convolutional._Conv):
         super(MultiConv, self).__init__(units, **kwargs)
         self.bit_map = bit_map
 
-    def call(self, inputs):
-        # Save current kernel, overwrite it with the quantized kernel, use the
-        # binarized kernel to do our evaluation by calling super().call(), then
-        # flip back to the old kernel so that backprop still works.
-        old_kernel = self.kernel
+    def build(self, input_shape):
+        super(MultiConv, self).build(input_shape)
         self.kernel = multibit(self.kernel, self.bit_map)
-        output = super(MultiConv, self).call(inputs)
-        self.kernel = old_kernel
-        return output
 
     def get_config(self):
         config = {
